@@ -1,25 +1,53 @@
 import React, { Component } from "react";
-
-import authors from "./data.js";
+import axios from "axios";
 
 // Components
 import Sidebar from "./Sidebar";
 import AuthorsList from "./AuthorsList";
 import AuthorDetail from "./AuthorDetail";
+import Loading from "./Loading";
 
 class App extends Component {
   state = {
+    loading: true,
     currentAuthor: null,
-    filteredAuthors: authors
+    authors: [],
+    filteredAuthors: []
   };
+  async componentDidMount() {
+    try {
+      const response = await axios.get(
+        "https://the-index-api.herokuapp.com/api/authors/"
+      );
+      const authors = response.data;
+      this.setState({
+        authors: authors,
+        filteredAuthors: authors,
+        loading: false
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
-  selectAuthor = author => this.setState({ currentAuthor: author });
+  selectAuthor = async author => {
+    this.setState({ loading: true });
+    try {
+      const response = await axios.get(
+        "https://the-index-api.herokuapp.com/api/authors/" + author.id + "/"
+      );
+
+      this.setState({ currentAuthor: response.data, loading: false });
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   unselectAuthor = () => this.setState({ currentAuthor: null });
 
   filterAuthors = query => {
     query = query.toLowerCase();
-    let filteredAuthors = authors.filter(author => {
+    let filteredAuthors = this.state.authors.filter(author => {
       return `${author.first_name} ${author.last_name}`
         .toLowerCase()
         .includes(query);
@@ -28,6 +56,7 @@ class App extends Component {
   };
 
   getContentView = () => {
+    if (this.state.loading) return <Loading />;
     if (this.state.currentAuthor) {
       return <AuthorDetail author={this.state.currentAuthor} />;
     } else {
@@ -35,7 +64,7 @@ class App extends Component {
         <AuthorsList
           authors={this.state.filteredAuthors}
           selectAuthor={this.selectAuthor}
-          filterAuthors={this.filterAuthors}
+          filterAuthors={this.state.filterAuthors}
         />
       );
     }
